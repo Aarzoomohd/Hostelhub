@@ -1,0 +1,15 @@
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
+
+const ProtectedRoute = () => {
+
+  const { owner } = useAuth();
+
+  if (!owner) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+};
+
+export default ProtectedRoute;
