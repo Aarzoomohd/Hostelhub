@@ -1,15 +1,15 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx"; // apna sahi path daalo
 
-import MainPage from "./pages/MainPage";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/register";
+import MainPage from "./pages/MainPage.jsx";
+import Login from "./pages/auth/Login.jsx";
+import Register from "./pages/auth/register.jsx";
 
-import Dashboard from "./pages/Dashboard";
-import Students from "./pages/Students";
-import Rooms from "./pages/Rooms";
+import Dashboard from "./pages/Dashboard.jsx";
+import Students from "./pages/Students.jsx";
+import Rooms from "./pages/Rooms.jsx";
 import Payments from "./pages/Payment.jsx";
-import HostelDetails from "./pages/HostelDetails";
+import HostelDetails from "./pages/HostelDetails.jsx";
 
 const App = () => {
   return (
