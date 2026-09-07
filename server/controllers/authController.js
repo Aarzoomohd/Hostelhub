@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 
 import Owner from "../models/Owner.js";
 import Hostel from "../models/Hostel.js";
@@ -8,21 +7,9 @@ import EmailVerification from "../models/EmailVerification.js";
 import crypto from "crypto";
 import PasswordReset from "../models/PasswordReset.js";
 
+import { Resend } from "resend";
 
-// ===============================
-// EMAIL TRANSPORTER
-// ===============================
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  family: 4,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ===============================
 // SEND EMAIL VERIFICATION OTP
@@ -38,38 +25,18 @@ export const sendVerificationOtp = async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = email.toLowerCase().trim();
 
-
-    // Check if email is already registered
-    const existingOwner = await Owner.findOne({
-      email: normalizedEmail,
-    });
-
-    if (existingOwner) {
-      return res.status(400).json({
-        message: "Email is already registered. Please login.",
-      });
-    }
-
-
-    // Generate 6 digit OTP
-    const otp = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // OTP expires in 10 minutes
-    const expiresAt = new Date(
-      Date.now() + 10 * 60 * 1000
-    );
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-
-    // Remove old OTP for this email
+    // Delete previous OTP
     await EmailVerification.deleteMany({
       email: normalizedEmail,
     });
-
 
     // Save new OTP
     await EmailVerification.create({
@@ -79,76 +46,55 @@ export const sendVerificationOtp = async (req, res) => {
       verified: false,
     });
 
-
-    // Send email
-    await transporter.sendMail({
-      from: `"HostelHub" <${process.env.EMAIL_USER}>`,
-      to: normalizedEmail,
+    // Send OTP email using Resend
+    const { data, error } = await resend.emails.send({
+      from: "HostelHub <onboarding@resend.dev>",
+      to: [normalizedEmail],
       subject: "HostelHub Email Verification OTP",
-
       html: `
-        <div style="
-          font-family: Arial, sans-serif;
-          max-width: 500px;
-          margin: auto;
-          padding: 30px;
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-        ">
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto;">
+          <h2>HostelHub Email Verification</h2>
 
-          <h2 style="color: #2563eb;">
-            HostelHub Email Verification
-          </h2>
-
-          <p>
-            Hello,
-          </p>
-
-          <p>
-            Use the following OTP to verify your email address:
-          </p>
+          <p>Your OTP for email verification is:</p>
 
           <div style="
             font-size: 32px;
             font-weight: bold;
             letter-spacing: 8px;
-            text-align: center;
-            margin: 25px 0;
-            color: #111827;
+            margin: 20px 0;
           ">
             ${otp}
           </div>
 
-          <p>
-            This OTP will expire in <strong>10 minutes</strong>.
-          </p>
+          <p>This OTP will expire in <strong>10 minutes</strong>.</p>
 
-          <p style="color: #6b7280;">
-            If you did not request this verification, you can safely
-            ignore this email.
-          </p>
+          <p>If you did not request this OTP, you can safely ignore this email.</p>
 
-          <p>
-            Regards,<br />
-            <strong>HostelHub Team</strong>
-          </p>
+          <br />
 
+          <p>Regards,<br />HostelHub Team</p>
         </div>
       `,
     });
 
+    if (error) {
+      console.error("Resend email error:", error);
+
+      return res.status(500).json({
+        message: "Failed to send OTP",
+      });
+    }
+
+    console.log("OTP email sent:", data);
 
     return res.status(200).json({
       message: "OTP sent successfully",
     });
-
   } catch (error) {
-
     console.error("Send OTP error:", error);
 
     return res.status(500).json({
       message: "Failed to send OTP",
-      error: error.message,
     });
   }
 };
