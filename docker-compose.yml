@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: ./server
+    image: hostelhub-backend
+    container_name: hostelhub-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env
+
+  frontend:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: https://hostelhub-2-3luc.onrender.com
+    image: hostelhub-frontend
+    container_name: hostelhub-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

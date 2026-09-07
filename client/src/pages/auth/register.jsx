@@ -35,6 +35,14 @@ const Register = () => {
     confirmPassword: "",
   });
 
+  const [errors, setErrors] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,17 +54,101 @@ const Register = () => {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
+  // Validates a single field and returns an error message (empty string if valid)
+  const validateField = (name, value, allValues = formData) => {
+    switch (name) {
+      case "name": {
+        if (!value.trim()) return "Full name is required";
+        if (value.trim().length < 2) return "Name must be at least 2 characters";
+        return "";
+      }
+      case "email": {
+        if (!value.trim()) return "Email is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()))
+          return "Please enter a valid email address";
+        return "";
+      }
+      case "phone": {
+        if (!value.trim()) return "Phone number is required";
+        if (!/^[0-9]{10}$/.test(value.trim()))
+          return "Phone number must be 10 digits";
+        return "";
+      }
+      case "password": {
+        if (!value) return "Password is required";
+        if (value.length < 6) return "Password must be at least 6 characters";
+        return "";
+      }
+      case "confirmPassword": {
+        if (!value) return "Please confirm your password";
+        if (allValues.password !== value) return "Passwords do not match";
+        return "";
+      }
+      default:
+        return "";
+    }
+  };
+
   const handleChange = (e) => {
-    setFormData({
+    const { name, value } = e.target;
+
+    const updatedFormData = {
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
+    };
+
+    setFormData(updatedFormData);
+
+    // Live-validate this field as the user types
+    setErrors((prev) => {
+      const next = {
+        ...prev,
+        [name]: validateField(name, value, updatedFormData),
+      };
+
+      // Re-check confirmPassword whenever password itself changes
+      if (name === "password" && updatedFormData.confirmPassword) {
+        next.confirmPassword = validateField(
+          "confirmPassword",
+          updatedFormData.confirmPassword,
+          updatedFormData
+        );
+      }
+
+      return next;
     });
 
     // If email is changed after verification, verify the new email again
-    if (e.target.name === "email") {
+    if (name === "email") {
       setEmailVerified(false);
       setOtp("");
     }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, value, formData),
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      name: validateField("name", formData.name, formData),
+      email: validateField("email", formData.email, formData),
+      phone: validateField("phone", formData.phone, formData),
+      password: validateField("password", formData.password, formData),
+      confirmPassword: validateField(
+        "confirmPassword",
+        formData.confirmPassword,
+        formData
+      ),
+    };
+
+    setErrors(newErrors);
+
+    return Object.values(newErrors).every((error) => error === "");
   };
 
   const handleSendOtp = async () => {
@@ -64,6 +156,13 @@ const Register = () => {
 
     if (!email) {
       toast.error("Please enter your email first");
+      return;
+    }
+
+    const emailError = validateField("email", email, formData);
+    if (emailError) {
+      setErrors((prev) => ({ ...prev, email: emailError }));
+      toast.error(emailError);
       return;
     }
 
@@ -114,13 +213,13 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!emailVerified) {
-      toast.error("Please verify your email first");
+    if (!validateForm()) {
+      toast.error("Please fix the highlighted errors");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
+    if (!emailVerified) {
+      toast.error("Please verify your email first");
       return;
     }
 
@@ -194,42 +293,13 @@ const Register = () => {
             >
               <ArrowRight size={15} className="rotate-180" />
             </Link>
-
-            {/* <p className="ml-3 text-right text-[9px] leading-4 text-slate-500 sm:text-[11px]">
-              Already a member?{" "}
-              <Link
-                to="/login"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("/login");
-                }}
-                className="relative z-20 cursor-pointer font-bold text-indigo-600 hover:text-indigo-800"
-              >
-                Sign in
-              </Link>
-            </p> */}
           </div>
 
           {/* Form content */}
           <div className="mx-auto flex w-full max-w-[480px] flex-1 flex-col justify-start py-3 sm:justify-center sm:py-5 md:py-6 lg:max-h-[600px] lg:py-3">
 
             {/* Brand + heading */}
-            <div className="mb-3 sm:mb-5">
-              {/* <div className="mb-2.5 flex items-center gap-2.5 sm:mb-3.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white shadow-md sm:h-11 sm:w-11">
-                  <Building2 size={20} />
-                </div>
-
-                <div>
-                  <p className="text-[17px] font-extrabold tracking-tight text-slate-950 sm:text-[18px]">
-                    HostelHub
-                  </p>
-                  <p className="text-[7px] font-bold tracking-[0.16em] text-slate-400 sm:text-[8px]">
-                    RUN A BETTER RESIDENCE
-                  </p>
-                </div>
-              </div> */}
-
+            <div className="mb-2 sm:mb-3">
               <h1 className="text-[22px] font-extrabold leading-tight tracking-[-0.05em] text-slate-950 sm:text-[31px] lg:text-[33px]">
                 Create your account
               </h1>
@@ -240,15 +310,16 @@ const Register = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-2 sm:space-y-3">
               {fields.map((field) => {
                 const Icon = field.icon;
+                const hasError = Boolean(errors[field.id]);
 
                 return (
                   <div key={field.id}>
                     <label
                       htmlFor={field.id}
-                      className="mb-1.5 block text-[10px] font-bold text-slate-700 sm:text-[11px]"
+                      className="mb-1 block text-[10px] font-bold text-slate-700 sm:text-[11px]"
                     >
                       {field.label}
                     </label>
@@ -268,11 +339,16 @@ const Register = () => {
                             placeholder={field.placeholder}
                             value={formData[field.id]}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             required
                             autoComplete={field.autoComplete}
+                            aria-invalid={hasError}
+                            aria-describedby={hasError ? `${field.id}-error` : undefined}
                             className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-3 text-[11px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-4 sm:py-3.5 ${
                               emailVerified
                                 ? "border-emerald-300 focus:border-emerald-500 focus:ring-emerald-100"
+                                : hasError
+                                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
                                 : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
                             }`}
                           />
@@ -310,12 +386,28 @@ const Register = () => {
                           placeholder={field.placeholder}
                           value={formData[field.id]}
                           onChange={handleChange}
+                          onBlur={handleBlur}
                           required
                           autoComplete={field.autoComplete}
-                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-[11px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 sm:py-3.5"
+                          aria-invalid={hasError}
+                          aria-describedby={hasError ? `${field.id}-error` : undefined}
+                          className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-3 text-[11px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-4 sm:py-3.5 ${
+                            hasError
+                              ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                              : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
+                          }`}
                         />
                       </div>
                     )}
+
+                    <p
+                      id={`${field.id}-error`}
+                      className={`mt-1 min-h-[11px] text-[9px] font-semibold leading-[11px] text-red-500 ${
+                        hasError ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      {errors[field.id] || "\u00A0"}
+                    </p>
                   </div>
                 );
               })}
@@ -324,7 +416,7 @@ const Register = () => {
               <div>
                 <label
                   htmlFor="password"
-                  className="mb-1.5 block text-[10px] font-bold text-slate-700 sm:text-[11px]"
+                  className="mb-1 block text-[10px] font-bold text-slate-700 sm:text-[11px]"
                 >
                   Password
                 </label>
@@ -342,9 +434,16 @@ const Register = () => {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     required
                     autoComplete="new-password"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-[11px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 sm:py-3.5"
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby={errors.password ? "password-error" : undefined}
+                    className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-10 text-[11px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-4 sm:py-3.5 ${
+                      errors.password
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
+                    }`}
                   />
 
                   <button
@@ -358,13 +457,22 @@ const Register = () => {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+
+                <p
+                  id="password-error"
+                  className={`mt-1 min-h-[11px] text-[9px] font-semibold leading-[11px] text-red-500 ${
+                    errors.password ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  {errors.password || "\u00A0"}
+                </p>
               </div>
 
               {/* Confirm Password */}
               <div>
                 <label
                   htmlFor="confirmPassword"
-                  className="mb-1.5 block text-[10px] font-bold text-slate-700 sm:text-[11px]"
+                  className="mb-1 block text-[10px] font-bold text-slate-700 sm:text-[11px]"
                 >
                   Confirm password
                 </label>
@@ -382,11 +490,15 @@ const Register = () => {
                     placeholder="Re-enter your password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     required
                     autoComplete="new-password"
+                    aria-invalid={Boolean(errors.confirmPassword)}
+                    aria-describedby={
+                      errors.confirmPassword ? "confirmPassword-error" : undefined
+                    }
                     className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-10 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-4 sm:py-3.5 ${
-                      formData.confirmPassword &&
-                      formData.password !== formData.confirmPassword
+                      errors.confirmPassword
                         ? "border-red-300 focus:border-red-400 focus:ring-red-100"
                         : formData.confirmPassword &&
                           formData.password === formData.confirmPassword
@@ -415,13 +527,21 @@ const Register = () => {
                   </button>
                 </div>
 
-                {formData.confirmPassword &&
-                  formData.password === formData.confirmPassword && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[9px] font-semibold text-emerald-600">
+                <div className="mt-1 flex min-h-[11px] items-center gap-1 text-[9px] font-semibold leading-[11px]">
+                  {errors.confirmPassword ? (
+                    <p id="confirmPassword-error" className="text-red-500">
+                      {errors.confirmPassword}
+                    </p>
+                  ) : formData.confirmPassword &&
+                    formData.password === formData.confirmPassword ? (
+                    <div className="flex items-center gap-1 text-emerald-600">
                       <CheckCircle2 size={11} />
                       Passwords match
                     </div>
+                  ) : (
+                    <p className="opacity-0">{"\u00A0"}</p>
                   )}
+                </div>
               </div>
 
               {/* Register */}
@@ -447,13 +567,7 @@ const Register = () => {
               </button>
             </form>
 
-            {/* Security */}
-            {/* <div className="mt-2 flex items-center justify-center gap-2 text-[8px] text-slate-400 sm:mt-5 sm:text-[10px]">
-              <ShieldCheck size={13} className="text-emerald-500" />
-              Your information is secure and protected
-            </div> */}
-
-            <p className="mt-2 text-center text-[9px] text-slate-500 sm:text-[11px]">
+            <p className="mt-1.5 text-center text-[9px] text-slate-500 sm:text-[11px]">
               Already have an account?{" "}
               <Link
                 to="/login"
@@ -468,7 +582,7 @@ const Register = () => {
             </p>
           </div>
 
-          <p className="pt-1 text-center text-[7px] text-slate-300 sm:pt-3 sm:text-[9px]">
+          <p className="pt-1 text-center text-[7px] text-slate-300 sm:pt-2 sm:text-[9px]">
             © {new Date().getFullYear()} HostelHub. All rights reserved.
           </p>
         </section>

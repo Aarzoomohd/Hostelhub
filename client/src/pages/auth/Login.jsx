@@ -32,6 +32,11 @@ const Login = () => {
     password: "",
   });
 
+  const[errors, setErrors] = useState({
+    email: "",
+    password: "",
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -48,12 +53,45 @@ const Login = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+ const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  setFormData({
+    ...formData,
+    [name]: value,
+  });
+
+  // Clear error when user starts correcting the field
+  setErrors((prev) => ({
+    ...prev,
+    [name]: "",
+  }));
+};
+
+  const validateForm = () => {
+    const newErrors = {
+      email: "",
+      password: "",
+    };
+
+   // Email validation
+  if (!formData.email.trim()) {
+    newErrors.email = "Email is required";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    newErrors.email = "Please enter a valid email address";
+  }
+
+  // Password validation
+  if (!formData.password) {
+    newErrors.password = "Password is required";
+  } else if (formData.password.length < 6) {
+    newErrors.password = "Password must be at least 6 characters";
+  }
+
+  setErrors(newErrors);
+
+  return !newErrors.email && !newErrors.password;
+  }
 
   const handleSendForgotOtp = async () => {
     if (!forgotEmail.trim()) {
@@ -175,6 +213,9 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!validateForm()) {
+  return;
+}
     setIsSubmitting(true);
 
     try {
@@ -277,6 +318,11 @@ const Login = () => {
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-[12px] text-slate-800 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 sm:py-3.5 md:py-4 sm:text-sm"
                   />
                 </div>
+                {errors.email && (
+  <p className="mt-1 text-[10px] font-medium text-red-500 sm:text-[11px]">
+    {errors.email}
+  </p>
+)}
               </div>
 
               {/* Password */}
@@ -325,6 +371,11 @@ const Login = () => {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {errors.password && (
+  <p className="mt-1 text-[10px] font-medium text-red-500 sm:text-[11px]">
+    {errors.password}
+  </p>
+)}
               </div>
 
               {/* Remember */}
