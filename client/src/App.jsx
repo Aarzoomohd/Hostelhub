@@ -10,6 +10,7 @@ import Rooms from "./pages/Rooms";
 import Payments from "./pages/Payment.jsx";
 import HostelDetails from "./pages/HostelDetails";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import HostelSetup from "./pages/HostelSetup.jsx";
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
 
       {/* APP */}
       <Route element= {<ProtectedRoute/>} >
+      <Route path="/hostel-setup" element={<HostelSetup />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/dashboard/students" element={<Students />} />
       <Route path="/api/room" element={<Rooms />} />
